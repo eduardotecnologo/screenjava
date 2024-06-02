@@ -12,6 +12,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import br.com.escreenjava.screenmatch.model.DadosEpisodio;
 import br.com.escreenjava.screenmatch.model.DadosSerie;
 import br.com.escreenjava.screenmatch.model.DadosTemporada;
+import br.com.escreenjava.screenmatch.model.Episodio;
 import br.com.escreenjava.screenmatch.service.ConsumoApi;
 import br.com.escreenjava.screenmatch.service.ConverteDados;
 @Component
@@ -31,6 +32,7 @@ public class Principal {
 
         System.out.println("Digite o nome da série para buscar:");
         var nomeSerie = leitura.nextLine();
+
         var ENDERECO = dotenv.get("OMDB_API_URL");
         var API_KEY = dotenv.get("OMDB_API_KEY");
         var json = consumo.obterDados(ENDERECO + nomeSerie.replace(" ", "+") + "&apikey=" + API_KEY);
@@ -43,7 +45,7 @@ public class Principal {
             System.err.println("Erro ao obter os dados da série ou total de temporadas não encontrado.");
             return;
         }
-       // System.out.println(dados.toString());
+        
 
 		List<DadosTemporada> temporadas = new ArrayList<>();
 
@@ -63,7 +65,15 @@ public class Principal {
         //     }
         // }
         //Lambida
-        temporadas.forEach(t -> t.episodios().forEach(e -> System.out.println(e.titulo())));
+        //temporadas.forEach(t -> t.episodios().forEach(e -> System.out.println(e.titulo())));
+		temporadas.forEach(t -> {
+		    List<DadosEpisodio> episodios = t.episodios();
+		    if (episodios != null) {
+		        episodios.forEach(e -> System.out.println(e.titulo()));
+		    } else {
+		        System.err.println("Episódios da temporada " + t.numero() + " não encontrados.");
+		    }
+		});
 
         List<DadosEpisodio> dadosEpisodios = temporadas.stream()
             .flatMap(t -> t.episodios().stream())
@@ -71,9 +81,17 @@ public class Principal {
             System.out.println("\nTop 5 episódios!");
 
             dadosEpisodios.stream()
+                .filter(e -> !e.avaliacao().equalsIgnoreCase("N/A"))
                 .sorted(Comparator.comparing(DadosEpisodio::avaliacao).reversed())
                 .limit(5)
                 .forEach(System.out::println);  
+
+                List<Episodio> episodios = temporadas.stream()
+                .flatMap(t -> t.episodios().stream()
+                .map(d -> new Episodio(t.numero(), d)))
+                .collect(Collectors.toList());
+
+                episodios.forEach(System.out::println);
             //.toList();
         // dadosEpisodios.add(new DadosEpisodio("teste", 3,"10", "2020-01-01"));
         // dadosEpisodios.forEach(System.out::println);        
